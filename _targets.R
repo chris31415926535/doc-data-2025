@@ -12,6 +12,7 @@ library(dplyr)
 library(sf)
 
 source("R/functions_filter.R")
+source("R/functions_handcode.R")
 
 
 list(
@@ -22,16 +23,25 @@ list(
   # Process raw data to estimate which physicians are providing comprehensive family medicine services to the community.
   targets::tar_target(doc_shp, docs_create_filters(doc_data_raw, ontario_shp)),
 
+
+  # Do any hand-coding. Right now single function from ONS hand-verified docs from Ottawa region
+  targets::tar_target(docs_handcoded_shp, handcode_ons(doc_shp)),
+
   # Save output to file in csv and json formats.
   # The geojson file has a subset of columns to stay under GitHub's 100MB limit.
   # The CSV file contains all columns, some of which are redundant.
   targets::tar_target(save_output, {
-    doc_shp |>
+    docs_handcoded_shp |>
       dplyr::select(
         -"training", -"postgrad", -"public_notifications", -"medical_school", -dplyr::starts_with("filter")
       ) |>
-      sf::write_sf(here::here(sprintf("output/docs-ontario-processed-%s.geojson", Sys.Date())))
-    readr::write_csv(sf::st_drop_geometry(doc_shp), here::here(sprintf("output/docs-ontario-processed-%s.csv", Sys.Date()))) # nolint: line_length_linter.
+      sf::write_sf(
+        layer = "physicians",
+        here::here(sprintf("output/docs-ontario-processed-%s.geojson", Sys.Date())),
+        append = FALSE,
+        delete_dsn = TRUE
+      )
+    readr::write_csv(sf::st_drop_geometry(docs_handcoded_shp), here::here(sprintf("output/docs-ontario-processed-%s.csv", Sys.Date()))) # nolint: line_length_linter.
     TRUE
   }),
   NULL
