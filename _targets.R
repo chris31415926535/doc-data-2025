@@ -12,6 +12,7 @@ library(dplyr)
 library(sf)
 
 source("R/functions_filter.R")
+source("R/functions_zip.R")
 source("R/functions_handcode.R")
 
 
@@ -42,7 +43,10 @@ list(
         delete_dsn = TRUE
       )
     readr::write_csv(sf::st_drop_geometry(docs_handcoded_shp), here::here(sprintf("output/docs-ontario-processed-%s.csv", Sys.Date()))) # nolint: line_length_linter.
-    TRUE
+
+    # return a random number to trigger zipping the files
+    runif(n = 1)
   }),
+  targets::tar_target(zip_files_for_distribution, zip_files(save_output)),
   NULL
 )
